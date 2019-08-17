@@ -1,7 +1,6 @@
-provider "gorillastack" {
-  api_key = "${var.api_key}"
-  team_id = "${var.team_id}"
-}
+## Track the addition of new accounts to an AWS Organization
+## Really useful if your organization has boilerplate resources to deploy
+## or processes to initialize on account creation.
 
 resource "gorillastack_rule" "new_account_from_org" {
   name      = "Catch new accounts created from the AWS Organization"
