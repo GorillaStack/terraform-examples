@@ -1,11 +1,8 @@
-provider "gorillastack" {
-  api_key = "${var.api_key}"
-  team_id = "${var.team_id}"
-}
 
-resource "gorillastack_rule" "new_account_from_org" {
-  name      = "Catch new accounts created from the AWS Organization"
-  labels    = ["terraform", "cloudtrail", "organization"]
+## These are some boilerplate iam checks for real time events
+resource "gorillastack_rule" "iam_attach_user_policy" {
+  name      = "Catch privilege escalation through AttachUserPolicy events"
+  labels    = ["terraform", "cloudtrail", "iam", "user policy"]
   enabled   = true
 
   context {
@@ -16,7 +13,7 @@ resource "gorillastack_rule" "new_account_from_org" {
   trigger {
     cloudtrail_event {
       match_fields {
-        event_name = ["CreateAccount"]
+        event_name = ["AttachUserPolicy"]
       }
     }
   }
@@ -48,19 +45,26 @@ resource "gorillastack_rule" "new_account_from_org" {
         label       = "User ARN"
         expression  = "detail.userIdentity.arn"
       }
+      notification_field_mapping {
+        label       = "User Name"
+        expression  = "detail.requestParameters.userName"
+      }
+      notification_field_mapping {
+        label       = "Policy ARN"
+        expression  = "detail.requestParameters.policyArn"
+      }
       notifications {
         slack_webhook {
-          room_id   = "<Your Slack Room Id>"
+          room_id   = "${var.slack_webhook_id}"
         }
       }
     }
   }
 }
 
-
-resource "gorillastack_rule" "new_account_invited_to_org" {
-  name      = "Catch new accounts being invited to the AWS Organization"
-  labels    = ["terraform", "cloudtrail", "organization"]
+resource "gorillastack_rule" "iam_create_login_profile" {
+  name      = "Catch CreateLoginProfile events for IAM"
+  labels    = ["terraform", "cloudtrail", "iam", "login profile"]
   enabled   = true
 
   context {
@@ -71,7 +75,7 @@ resource "gorillastack_rule" "new_account_invited_to_org" {
   trigger {
     cloudtrail_event {
       match_fields {
-        event_name = ["InviteAccountToOrganization"]
+        event_name = ["CreateLoginProfile"]
       }
     }
   }
@@ -103,71 +107,26 @@ resource "gorillastack_rule" "new_account_invited_to_org" {
         label       = "User ARN"
         expression  = "detail.userIdentity.arn"
       }
-      notifications {
-        slack_webhook {
-          room_id   = "<Your Slack Room Id>"
-        }
-      }
-    }
-  }
-}
-resource "gorillastack_rule" "new_organizational_unit" {
-  name      = "Catch new organizational units created within AWS Organization"
-  labels    = ["terraform", "cloudtrail", "organization"]
-  enabled   = true
-
-  context {
-    aws {
-    }
-  }
-
-  trigger {
-    cloudtrail_event {
-      match_fields {
-        event_name = ["CreateOrganizationalUnit"]
-      }
-    }
-  }
-
-  actions {
-    notify_event {
-      index         = 1
       notification_field_mapping {
-        label       = "Event Name"
-        expression  = "detail.eventName"
+        label       = "User Name"
+        expression  = "detail.requestParameters.userName"
       }
       notification_field_mapping {
-        label       = "Event Time"
-        expression  = "detail.eventTime"
-      }
-      notification_field_mapping {
-        label       = "Event Source"
-        expression  = "detail.eventSource"
-      }
-      notification_field_mapping {
-        label       = "AWS Region"
-        expression  = "detail.awsRegion"
-      }
-      notification_field_mapping {
-        label       = "IP Address"
-        expression  = "detail.sourceIPAddress"
-      }
-      notification_field_mapping {
-        label       = "User ARN"
-        expression  = "detail.userIdentity.arn"
+        label       = "Password Reset Required"
+        expression  = "detail.requestParameters.passwordResetRequired"
       }
       notifications {
         slack_webhook {
-          room_id   = "<Your Slack Room Id>"
+          room_id   = "${var.slack_webhook_id}"
         }
       }
     }
   }
 }
 
-resource "gorillastack_rule" "leave_organization" {
-  name      = "Catch accounts leaving the AWS Organization"
-  labels    = ["terraform", "cloudtrail", "organization"]
+resource "gorillastack_rule" "iam_create_access_key" {
+  name      = "Catch CreateAccessKey events for IAM"
+  labels    = ["terraform", "cloudtrail", "iam", "access keys"]
   enabled   = true
 
   context {
@@ -178,7 +137,7 @@ resource "gorillastack_rule" "leave_organization" {
   trigger {
     cloudtrail_event {
       match_fields {
-        event_name = ["LeaveOrganization"]
+        event_name = ["CreateAccessKey"]
       }
     }
   }
@@ -210,9 +169,13 @@ resource "gorillastack_rule" "leave_organization" {
         label       = "User ARN"
         expression  = "detail.userIdentity.arn"
       }
+      notification_field_mapping {
+        label       = "User Name"
+        expression  = "detail.requestParameters.userName"
+      }
       notifications {
         slack_webhook {
-          room_id   = "<Your Slack Room Id>"
+          room_id   = "${var.slack_webhook_id}"
         }
       }
     }
